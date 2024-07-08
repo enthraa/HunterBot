@@ -33,7 +33,7 @@ async def web_app():
     app.router.add_get('/', lambda request: web.Response(text="Bot is running"))
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, '0.0.0.0', 8080)  # Écoute sur le port 9000
+    site = web.TCPSite(runner, '0.0.0.0', 9000)   # Écoute sur le port 9000
     await site.start()
 
 # Démarrage du serveur web et du bot
