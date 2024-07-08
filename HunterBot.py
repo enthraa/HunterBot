@@ -27,6 +27,55 @@ def setup_database():
 
 setup_database()
 
+# Commande 'hunter' avec un cooldown pour éviter les doubles envois
+
+
+@bot.command()
+@commands.cooldown(1, 4, commands.BucketType.user)
+async def hunter(ctx):
+    print("appel commande")
+    conn = sqlite3.connect('images.db')
+    c = conn.cursor()
+
+    # Sélectionne une image aléatoire non montrée
+    c.execute(
+        "SELECT url FROM images WHERE shown = 0 ORDER BY RANDOM() LIMIT 1")
+    result = c.fetchone()
+
+    if result:
+        image_filename = result[0]
+        image_path = os.path.join('image', image_filename)
+
+        # Vérifie que l'image existe avant d'essayer de l'envoyer
+        if os.path.exists(image_path):
+            # Marque l'image comme montrée
+            c.execute("UPDATE images SET shown = shown + 1 WHERE url = ?",
+                      (image_filename, ))
+            conn.commit()
+
+            await ctx.send(file=discord.File(image_path))
+        else:
+            await ctx.send("L'image ne peut pas être trouvée.")
+            c.execute("DELETE FROM images WHERE url = ?", (image_filename, ))
+            conn.commit()
+    else:
+        await ctx.send(
+            "Pas d'image de disponible ou toutes les images ont été montrées.")
+
+    conn.close()
+
+
+# Gestionnaire d'erreurs pour traiter les erreurs de cooldown
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandOnCooldown):
+        msg = f"Cette commande est en cooldown. Veuillez attendre {error.retry_after:.2f} secondes."
+        await ctx.send(msg)
+    else:
+        raise error  # Renvoie les autres erreurs pour qu'elles ne passent pas sous silence
+
+
+
 # Fonction pour démarrer un serveur web minimaliste
 async def web_app():
     app = web.Application()
